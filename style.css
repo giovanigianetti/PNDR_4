@@ -265,3 +265,9 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .layout { padding: 10px; }
   .cards { grid-template-columns: 1fr; }
 }
+
+
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { background: #eef4ff; }
+#activityEditTable select { min-width: 120px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.badge.warn { background: #fff4e5; color: var(--amber); }
