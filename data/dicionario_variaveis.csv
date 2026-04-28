@@ -1,0 +1,11 @@
+variavel,descricao
+massa_obj4,Massa salarial das atividades elegíveis ao Objetivo 4.
+massa_com_agr,Massa salarial das atividades classificadas como commodities agrícolas.
+massa_com_min,Massa salarial das atividades classificadas como commodities minerais.
+massa_com,Soma de massa_com_agr e massa_com_min.
+razao_dependencia_com,massa_com / massa_obj4.
+q_pib_2021,Quartil territorial do PIB 2021.
+q_pib_pc_2021,Quartil territorial do PIB per capita 2021.
+q_pop_2021,Quartil territorial da população 2021.
+cruz_q_pib_pop,Cruzamento entre quartis de PIB e população.
+cruz_q_pibpc_pop,Cruzamento entre quartis de PIB per capita e população.

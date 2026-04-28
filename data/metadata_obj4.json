@@ -1,0 +1,20 @@
+{
+  "title": "Dashboard Objetivo 4 da PNDR",
+  "generated_at": "2026-04-27T19:35:59.287669",
+  "files": {
+    "municipio": "data/indicadores_obj4_municipio.csv",
+    "tipologia": "data/indicadores_obj4_tipologia.csv",
+    "grupos_municipio": "data/grupos_obj4_municipio.csv",
+    "grupos_tipologia": "data/grupos_obj4_tipologia.csv",
+    "cnae": "data/tabela_cnae_editavel.csv",
+    "compact": "data/base_mun_cnae_compact.csv.gz"
+  },
+  "n_municipios": 5571,
+  "n_tipologias": 914,
+  "n_cnaes": 1351,
+  "n_mun_cnae_rows": 769788,
+  "notes": [
+    "A base município-CNAE foi compactada em CSV.GZ com colunas essenciais para recálculo no navegador.",
+    "Adicione GeoJSON em maps/municipios.geojson e maps/ufs.geojson para habilitar mapas coropléticos."
+  ]
+}

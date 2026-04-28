@@ -1,0 +1,18 @@
+{
+  "package": "dashboard_obj4_pndr_com_malhas",
+  "maps": {
+    "local_geojson_supported": [
+      "maps/municipios.geojson",
+      "maps/ufs.geojson"
+    ],
+    "local_topojson_supported": [
+      "maps/municipios_ibge_topo.json",
+      "maps/ufs_ibge_topo.json"
+    ],
+    "remote_fallback": {
+      "municipios": "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=municipio&qualidade=minima&formato=application/json",
+      "ufs": "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=UF&qualidade=minima&formato=application/json"
+    }
+  },
+  "notes": "O dashboard carrega GeoJSON local, TopoJSON local ou, se ausentes, as malhas simplificadas oficiais do IBGE via API."
+}
