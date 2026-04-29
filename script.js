@@ -754,15 +754,14 @@ function updateMap() {
   const byKey = new Map();
   state.activeRows.forEach(r => { const key = state.lastLevel === 'municipio' ? r.cod_mun6 : r.id_tipologia; byKey.set(String(key), r); });
   const vals = state.activeRows.map(r => num(r.razao_dependencia_com)).filter(Number.isFinite);
-  const min = vals.length ? Math.min(...vals) : 0;
-  const max = vals.length ? Math.max(...vals) : 1;
+  const deciles = buildDecileScale(vals);
 
   if (state.geoLayer) state.geoLayer.remove();
   state.geoLayer = L.geoJSON(state.geoMunicipios, {
     style: (feature) => {
       const id = featureMunId(feature);
       const row = state.lastLevel === 'municipio' ? byKey.get(id) : byKey.get(cleanTipologia((state.munMeta.get(id) || {}).id_tipologia));
-      return { color:'#ffffff', weight:.35, fillColor: mapColor(row, metric, min, max), fillOpacity: row ? .78 : .05 };
+      return { color:'#ffffff', weight:.35, fillColor: mapColor(row, metric, deciles), fillOpacity: row ? .78 : .05 };
     },
     onEachFeature: (feature, layer) => {
       const id = featureMunId(feature);
@@ -773,16 +772,50 @@ function updateMap() {
     }
   }).addTo(state.map);
   if (state.geoUfs && !state.ufLayer) state.ufLayer = L.geoJSON(state.geoUfs, { style:{ fillOpacity:0, color:'#102a43', weight:1.4, opacity:.9 } }).addTo(state.map);
-  updateLegend(metric, min, max);
+  updateLegend(metric, deciles);
 }
 function featureMunId(feature) { const p = feature.properties || {}; const v = p.cod_mun6 || p.cod_mun7 || p.codarea || p.CD_MUN || p.cd_mun || p.codigo_municipio || p.CD_GEOCMU || p.id || p.code_muni || ''; const s = cleanDigits(v, null); return s.length >= 7 ? s.slice(0,6) : s.padStart(6,'0'); }
-function mapColor(row, metric, min, max) {
+function mapColor(row, metric, deciles) {
   if (!row) return '#e9eef6';
   if (metric === 'indicador_obj4') return indicatorColor(row.indicador_obj4);
   const v = num(row.razao_dependencia_com);
   if (!Number.isFinite(v)) return '#d0d5dd';
-  const t = max > min ? Math.max(0, Math.min(1, (v - min)/(max-min))) : .5;
+  const bin = decileBin(v, deciles.breaks);
+  return decileColor(bin);
+}
+function buildDecileScale(values) {
+  const sorted = values.filter(Number.isFinite).sort((a,b)=>a-b);
+  const breaks = [];
+  for (let p = 0; p <= 100; p += 10) breaks.push(percentileValue(sorted, p/100));
+  return { breaks, labels: decileLabels(breaks) };
+}
+function percentileValue(sorted, p) {
+  if (!sorted.length) return NaN;
+  if (sorted.length === 1) return sorted[0];
+  const pos = (sorted.length - 1) * p;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+function decileBin(value, breaks) {
+  if (!breaks || breaks.length < 2 || !Number.isFinite(value)) return -1;
+  for (let i = 0; i < 10; i++) {
+    const lo = breaks[i], hi = breaks[i+1];
+    if (i === 9 && value <= hi) return i;
+    if (value >= lo && value <= hi) return i;
+  }
+  return value > breaks[10] ? 9 : 0;
+}
+function decileColor(bin) {
+  if (bin < 0) return '#d0d5dd';
+  const t = bin / 9;
   return interpolate('#e0f2fe', '#083c5f', t);
+}
+function decileLabels(breaks) {
+  if (!breaks || breaks.length < 11 || breaks.some(v => !Number.isFinite(v))) return [];
+  const labels = [];
+  for (let i = 0; i < 10; i++) labels.push({ p0:i*10, p1:(i+1)*10, lo:breaks[i], hi:breaks[i+1], color:decileColor(i) });
+  return labels;
 }
 function indicatorColor(v) {
   const s = String(v || '');
@@ -795,16 +828,30 @@ function indicatorColor(v) {
   }
   return '#98a2b3';
 }
-function updateLegend(metric, min, max) {
+function updateLegend(metric, deciles) {
   if (!state.map || !window.L) return;
   if (state.legend) state.legend.remove();
   state.legend = L.control({position: 'bottomright'});
   state.legend.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
     if (metric === 'indicador_obj4') {
-      div.innerHTML = '<strong>Indicador OBJ4</strong><br><span class="sw" style="background:#1b7f63"></span>Abaixo da média<br><span class="sw" style="background:#b42318"></span>Acima/igual à média<br><span class="sw" style="background:#98a2b3"></span>Sem classificação';
+      div.innerHTML = [
+        '<strong>Indicador OBJ4</strong>',
+        '<span class="sw" style="background:#d1fadf"></span>Abaixo P0–P25',
+        '<span class="sw" style="background:#a6f4c5"></span>Abaixo P25–P50',
+        '<span class="sw" style="background:#32d583"></span>Abaixo P50–P75',
+        '<span class="sw" style="background:#039855"></span>Abaixo P75–P100',
+        '<span class="sw" style="background:#1b7f63"></span>Abaixo da média',
+        '<span class="sw" style="background:#fee4e2"></span>Acima P0–P25',
+        '<span class="sw" style="background:#fecdca"></span>Acima P25–P50',
+        '<span class="sw" style="background:#f97066"></span>Acima P50–P75',
+        '<span class="sw" style="background:#b42318"></span>Acima P75–P100',
+        '<span class="sw" style="background:#b42318"></span>Acima/igual à média',
+        '<span class="sw" style="background:#98a2b3"></span>Sem classificação'
+      ].join('<br>');
     } else {
-      div.innerHTML = `<strong>Razão de dependência</strong><br><span class="grad"></span><br>${fmtRatio(min)} — ${fmtRatio(max)}`;
+      const rows = (deciles.labels || []).map(d => `<span class="sw" style="background:${d.color}"></span>P${d.p0}–P${d.p1}: ${fmtRatio(d.lo)}–${fmtRatio(d.hi)}`);
+      div.innerHTML = ['<strong>Razão de dependência</strong>', '<small>Escala por percentis de 10 em 10</small>', ...rows].join('<br>');
     }
     return div;
   };

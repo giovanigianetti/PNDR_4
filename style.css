@@ -295,7 +295,10 @@ th.resizable {
   box-shadow: var(--shadow);
   line-height: 1.45;
   font-size: 12px;
+  max-height: 360px;
+  overflow-y: auto;
 }
+.map-legend small { color: var(--muted); }
 .map-legend .sw {
   display: inline-block;
   width: 13px;
