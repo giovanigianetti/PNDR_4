@@ -53,13 +53,6 @@
       </label>
 
       <div class="filter-block">
-        <h3>Faixas customizadas</h3>
-        <div class="range-row"><span>PIB 2021</span><input id="pibMin" type="number" placeholder="mín" /><input id="pibMax" type="number" placeholder="máx" /></div>
-        <div class="range-row"><span>PIB pc 2021</span><input id="pibpcMin" type="number" placeholder="mín" /><input id="pibpcMax" type="number" placeholder="máx" /></div>
-        <div class="range-row"><span>Pop. 2021</span><input id="popMin" type="number" placeholder="mín" /><input id="popMax" type="number" placeholder="máx" /></div>
-      </div>
-
-      <div class="filter-block">
         <h3>CNAE</h3>
         <label>Seção
           <select id="secaoFilter" multiple size="5"></select>
@@ -67,7 +60,7 @@
         <label>Divisão
           <select id="divisaoFilter" multiple size="5"></select>
         </label>
-        <label>Classificação RAIS
+        <label>RAIS 2024 Brasil
           <select id="classificacaoFilter" multiple size="5"></select>
         </label>
         <label>Modo de atividade
@@ -88,30 +81,31 @@
             <option value="brasil">Brasil / universo filtrado</option>
             <option value="q_pib_2021">Quartil de PIB</option>
             <option value="q_pib_pc_2021">Quartil de PIB per capita</option>
-            <option value="q_pop_2021">Quartil de população</option>
-            <option value="cruz_q_pib_pop">PIB × População</option>
-            <option value="cruz_q_pibpc_pop">PIB pc × População</option>
-            <option value="custom">Grupo customizado</option>
+            <option value="q_pop_2021">Quartil de população 2021</option>
+            <option value="q_pop_2022">Quartil de população 2022</option>
+            <option value="cruz_q_pib_pop">PIB × População 2021</option>
+            <option value="cruz_q_pibpc_pop">PIB pc × População 2021</option>
           </select>
         </label>
 
         <label>Método da média
           <select id="meanMethod">
-            <option value="ponderada_refeita">Ponderada/refeita: soma(com)/soma(obj4)</option>
-            <option value="simples">Média simples das razões</option>
             <option value="ponderada_massa_obj4">Média ponderada por massa OBJ4</option>
+            <option value="simples">Média simples das razões</option>
+          </select>
+        </label>
+
+        <label>Indicador OBJ4
+          <select id="indicatorMode">
+            <option value="media">Abaixo/acima da média</option>
+            <option value="percentis">Percentis dentro de abaixo/acima</option>
           </select>
         </label>
 
         <label>Mapa
           <select id="mapMetric">
             <option value="razao_dependencia_com">Razão de dependência</option>
-            <option value="classificacao_media">Acima/abaixo da média</option>
-            <option value="distancia_media">Distância em relação à média</option>
-            <option value="massa_obj4">Massa OBJ4</option>
-            <option value="massa_com">Massa commodities</option>
-            <option value="pib_pc_2021">PIB per capita</option>
-            <option value="pop_2021">População 2021</option>
+            <option value="indicador_obj4">Indicador OBJ4</option>
           </select>
         </label>
       </div>
@@ -145,7 +139,10 @@
       <section class="tab-panel" id="maps">
         <div class="panel">
           <div class="panel-header">
-            <h3>Mapa coroplético</h3>
+            <div>
+              <h3>Mapa coroplético</h3>
+              <p class="muted">Escolha entre a razão contínua de dependência e a classificação do Indicador OBJ4 da tabela analítica.</p>
+            </div>
             <span id="mapWarning" class="warning"></span>
           </div>
           <div id="map"></div>
@@ -153,9 +150,33 @@
       </section>
 
       <section class="tab-panel" id="groups">
-        <div class="grid two">
-          <div class="panel"><h3>Matriz PIB × População</h3><div id="chartHeatPibPop" class="chart"></div></div>
-          <div class="panel"><h3>Matriz PIB pc × População</h3><div id="chartHeatPibpcPop" class="chart"></div></div>
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Matriz de grupos territoriais</h3>
+              <p class="muted">Monte a matriz com quartis de quaisquer combinações dois a dois, ou visualize uma dimensão isolada.</p>
+            </div>
+            <div class="toolbar">
+              <label>Dimensão A
+                <select id="groupVarA">
+                  <option value="pib">PIB 2021</option>
+                  <option value="pibpc">PIB per capita 2021</option>
+                  <option value="pop2021">População 2021</option>
+                  <option value="pop2022">População 2022</option>
+                </select>
+              </label>
+              <label>Dimensão B
+                <select id="groupVarB">
+                  <option value="none">Isolada</option>
+                  <option value="pib">PIB 2021</option>
+                  <option value="pibpc">PIB per capita 2021</option>
+                  <option value="pop2021" selected>População 2021</option>
+                  <option value="pop2022">População 2022</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div id="chartGroupMatrix" class="chart"></div>
         </div>
         <div class="panel">
           <h3>Estatísticas por grupo</h3>
@@ -180,7 +201,7 @@
           <div class="panel-header">
             <div>
               <h3>Edição dinâmica de atividades</h3>
-              <p class="muted">Altere a categoria exclusiva de cada CNAE no navegador: OBJ4, Agrícola, Mineral ou Excluir OBJ4. As alterações são aplicadas aos cálculos após clicar em “Aplicar alterações”. A tabela permite ordenamento por coluna.</p>
+              <p class="muted">Altere a categoria exclusiva de cada CNAE no navegador: OBJ4, Agrícola, Mineral ou Excluir OBJ4. As colunas da tabela podem ser ordenadas e redimensionadas.</p>
             </div>
             <div class="toolbar">
               <button id="applyActivityChanges" class="primary">Aplicar alterações</button>
@@ -192,11 +213,11 @@
           <div class="edit-controls">
             <input id="cnaeSearch" type="search" placeholder="Buscar CNAE ou descrição..." />
             <select id="bulkClassificacao" multiple size="4"></select>
-            <button id="excludeByClass" class="secondary">Excluir do OBJ4 pela classificação selecionada</button>
+            <button id="excludeByClass" class="secondary">Excluir do OBJ4 pela RAIS 2024 Brasil selecionada</button>
             <button id="includeVisibleObj4" class="secondary">Marcar filtradas como OBJ4</button>
             <button id="removeVisibleObj4" class="secondary">Remover filtradas do OBJ4</button>
           </div>
-          <div id="activityEditTable" class="table-wrap large-table"></div>
+          <div id="activityEditTable" class="table-wrap large-table resizable-table"></div>
         </div>
       </section>
 
@@ -220,7 +241,10 @@
       <section class="tab-panel" id="table">
         <div class="panel">
           <div class="panel-header">
-            <h3>Tabela analítica</h3>
+            <div>
+              <h3>Tabela analítica</h3>
+              <p class="muted">O campo Indicador OBJ4 pode ser exibido como classificação abaixo/acima da média ou como percentis dentro dos grupos abaixo/acima.</p>
+            </div>
             <div class="toolbar">
               <select id="tableDataset">
                 <option value="territorial">Territorial</option>
@@ -231,6 +255,10 @@
               <button id="exportTable" class="secondary">Exportar CSV</button>
             </div>
           </div>
+          <div class="grid two">
+            <div class="panel inner"><h3>Visão geral do Indicador OBJ4</h3><div id="chartIndicatorSummary" class="chart small"></div></div>
+            <div class="panel inner"><h3>PIB, população e massa salarial por Indicador OBJ4</h3><div id="indicatorSummaryTable" class="table-wrap compact-table"></div></div>
+          </div>
           <div id="analyticTable" class="table-wrap"></div>
         </div>
       </section>
@@ -240,16 +268,27 @@
           <h2>Metodologia</h2>
           <p>O dashboard calcula a dependência de commodities a partir da massa salarial formal associada a cada combinação município–CNAE. A razão central é:</p>
           <p class="formula">razão de dependência = massa salarial em commodities agrícolas e minerais ÷ massa salarial elegível ao Objetivo 4.</p>
-          <p>A massa elegível é definida pelas atividades com <code>e_obj4 = 1</code>. A massa em commodities é a soma das atividades com <code>com_agr = 1</code> ou <code>com_min = 1</code>.</p>
+          <p>A massa elegível é definida pelas atividades classificadas como OBJ4. A massa em commodities é a soma das atividades classificadas como commodity agrícola ou commodity mineral.</p>
+
+          <h3>RAIS 2024 Brasil</h3>
+          <p>RAIS 2024 Brasil é a classificação setorial construída a partir da tabela nacional de salários, vínculos, massa salarial, quartis e ranks da RAIS 2024, excluindo empregos e empresas do setor público. Ela substitui o rótulo genérico “Classificação” nas abas de CNAE e permite filtrar atividades por sua posição relativa em remuneração e vínculos no Brasil.</p>
+
           <h3>Médias de referência</h3>
-          <p>O painel permite comparar cada território à média do Brasil/universo filtrado, a quartis isolados de PIB, PIB per capita ou população, aos cruzamentos PIB × População e PIB per capita × População, ou a um grupo customizado definido por faixas numéricas.</p>
+          <p>O painel permite comparar cada território à média do Brasil/universo filtrado, a quartis isolados de PIB, PIB per capita, população de 2021 ou população de 2022, e aos cruzamentos PIB × População e PIB per capita × População. Foram mantidos dois métodos: média simples das razões territoriais e média ponderada por massa OBJ4.</p>
           <ul>
             <li><strong>Média simples:</strong> média aritmética das razões territoriais.</li>
-            <li><strong>Ponderada/refeita:</strong> soma da massa em commodities dividida pela soma da massa elegível no grupo.</li>
-            <li><strong>Ponderada por massa OBJ4:</strong> média das razões territoriais ponderada por massa elegível.</li>
+            <li><strong>Média ponderada por massa OBJ4:</strong> média das razões territoriais ponderada pela massa salarial elegível ao Objetivo 4; por construção, equivale à razão agregada soma(massa commodity) ÷ soma(massa OBJ4).</li>
           </ul>
+
+          <h3>Indicador OBJ4</h3>
+          <p>O Indicador OBJ4 classifica o território comparando sua razão de dependência de commodities à referência selecionada. No modo simples, o território é classificado como abaixo ou acima/igual à média. No modo por percentis, os territórios abaixo e acima da média são subdivididos separadamente em quatro faixas percentílicas, permitindo distinguir casos moderados e extremos.</p>
+
+          <h3>Potencial de diversificação</h3>
+          <p>A aba Ranking e priorização inclui um índice exploratório de potencial de diversificação. O indicador combina maior massa salarial elegível, menor dependência de commodities e maior PIB per capita, normalizados em escala aproximada de 0 a 100. Ele deve ser interpretado como uma ordenação heurística para triagem, não como medida causal de impacto ou retorno de política pública.</p>
+
           <h3>Edição de atividades</h3>
           <p>A aba de edição permite alterar dinamicamente a categoria exclusiva de cada CNAE: OBJ4, Agrícola, Mineral ou Excluir OBJ4. As bases originais são preservadas e as alterações podem ser exportadas ou recarregadas em CSV.</p>
+
           <h3>Limitações</h3>
           <p>A RAIS cobre vínculos formais e a massa salarial é uma proxy parcial da estrutura produtiva. Atividades informais, excedente operacional, valor adicionado e encadeamentos intersetoriais não são diretamente observados neste indicador.</p>
         </div>

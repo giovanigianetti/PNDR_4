@@ -271,3 +271,46 @@ th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { background: #eef4ff; }
 #activityEditTable select { min-width: 120px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .badge.warn { background: #fff4e5; color: var(--amber); }
+
+/* Ajustes PNDR_4 solicitados */
+.panel.inner {
+  box-shadow: none;
+  margin-bottom: 0;
+  background: #fbfdff;
+}
+.chart.small { height: 300px; }
+.compact-table { max-height: 300px; }
+.resizable-table table { table-layout: auto; }
+th.resizable {
+  resize: horizontal;
+  overflow: auto;
+  min-width: 72px;
+  max-width: 520px;
+}
+.map-legend {
+  background: white;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  line-height: 1.45;
+  font-size: 12px;
+}
+.map-legend .sw {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+.map-legend .grad {
+  display: inline-block;
+  width: 140px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e0f2fe, #083c5f);
+  border: 1px solid #d0d5dd;
+}
+#groups .toolbar label { margin-bottom: 0; min-width: 190px; }
+#groups .toolbar select { width: 100%; }
