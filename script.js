@@ -53,8 +53,8 @@ const REMOTE_MAPS = {
 const GROUP_DIMS = {
   pib: { label: 'PIB 2021', q: 'q_pib_2021', value: 'pib_2021_mil', prefix: 'QPIB' },
   pibpc: { label: 'PIB per capita 2021', q: 'q_pib_pc_2021', value: 'pib_pc_2021', prefix: 'QPIBPC' },
-  pop2021: { label: 'População 2021', q: 'q_pop_2021', value: 'pop_2021', prefix: 'QPOP2021' },
-  pop2022: { label: 'População 2022', q: 'q_pop_2022', value: 'pop_2022', prefix: 'QPOP2022' },
+  pop2021: { label: 'População 2021', q: 'q_pop_2021', value: 'pop_2021', prefix: 'QPOP2021_' },
+  pop2022: { label: 'População 2022', q: 'q_pop_2022', value: 'pop_2022', prefix: 'QPOP2022_' },
 };
 
 const NUM_FIELDS = new Set([
@@ -347,16 +347,33 @@ function addMass(m, v, f) {
 }
 function finalizeMetric(m) { m.massa_com = m.massa_com_agr + m.massa_com_min; m.razao_dependencia_com = m.massa_obj4 > 0 ? m.massa_com / m.massa_obj4 : NaN; return m; }
 function assignQuartiles(rows) {
+  // Recalcula todos os quartis no navegador a partir das variáveis territoriais
+  // e limpa valores antigos/importados. Linhas sem informação territorial completa
+  // permanecem sem quartil e são excluídas das matrizes de quartis.
   Object.values(GROUP_DIMS).forEach(dim => {
-    const valid = rows.filter(r => Number.isFinite(num(r[dim.value]))).sort((a,b)=>num(a[dim.value])-num(b[dim.value]));
+    rows.forEach(r => { r[dim.q] = NaN; });
+    const valid = rows
+      .filter(r => Number.isFinite(num(r[dim.value])))
+      .sort((a,b)=>num(a[dim.value])-num(b[dim.value]));
     const n = valid.length;
-    valid.forEach((r,i) => { r[dim.q] = n ? Math.min(4, Math.floor(i * 4 / n) + 1) : NaN; });
+    valid.forEach((r,i) => { r[dim.q] = Math.min(4, Math.floor(i * 4 / n) + 1); });
   });
+}
+function validQuartileValue(q) {
+  const n = num(q);
+  return Number.isFinite(n) && n >= 1 && n <= 4 ? Math.trunc(n) : null;
+}
+function quartileLabel(dim, r) {
+  const q = validQuartileValue(r[dim.q]);
+  return q ? (dim.prefix + q) : null;
 }
 function addCrossGroups(rows) {
   rows.forEach(r => {
-    r.cruz_q_pib_pop = `${GROUP_DIMS.pib.prefix}${r.q_pib_2021 || ''}_${GROUP_DIMS.pop2021.prefix}${r.q_pop_2021 || ''}`;
-    r.cruz_q_pibpc_pop = `${GROUP_DIMS.pibpc.prefix}${r.q_pib_pc_2021 || ''}_${GROUP_DIMS.pop2021.prefix}${r.q_pop_2021 || ''}`;
+    const qPib = quartileLabel(GROUP_DIMS.pib, r);
+    const qPibPc = quartileLabel(GROUP_DIMS.pibpc, r);
+    const qPop = quartileLabel(GROUP_DIMS.pop2021, r);
+    r.cruz_q_pib_pop = qPib && qPop ? (qPib + '_' + qPop) : '';
+    r.cruz_q_pibpc_pop = qPibPc && qPop ? (qPibPc + '_' + qPop) : '';
   });
 }
 
@@ -392,6 +409,15 @@ function applyTerritoryFilters(rows) {
   });
 }
 
+function referenceGroupKey(r, mode) {
+  if (mode === 'brasil') return 'brasil';
+  const v = r[mode];
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number' && !Number.isFinite(v)) return null;
+  const str = String(v).trim();
+  if (!str || str === 'NaN' || str.includes('NA') || str.endsWith('_') || str.startsWith('_')) return null;
+  return str;
+}
 function classifyRows(rows) {
   const mode = $('referenceMode').value;
   const method = $('meanMethod').value;
@@ -403,7 +429,8 @@ function classifyRows(rows) {
   } else {
     const groups = new Map();
     rows.forEach(r => {
-      const g = String(r[mode] ?? 'Sem grupo');
+      const g = referenceGroupKey(r, mode);
+      if (!g) return;
       if (!groups.has(g)) groups.set(g, []);
       groups.get(g).push(r);
     });
@@ -411,10 +438,11 @@ function classifyRows(rows) {
   }
 
   const classified = rows.map(r => {
-    const ref = mode === 'brasil' ? defaultRef : groupRef.get(String(r[mode] ?? 'Sem grupo'));
+    const key = referenceGroupKey(r, mode);
+    const ref = mode === 'brasil' ? defaultRef : (key ? groupRef.get(key) : NaN);
     const ratio = r.razao_dependencia_com;
     const dist = Number.isFinite(ratio) && Number.isFinite(ref) && ref !== 0 ? (ratio - ref) / Math.abs(ref) : NaN;
-    return { ...r, referencia_comparacao: ref, classificacao_media: basicClass(ratio, ref), distancia_media: dist, potencial_diversificacao: potentialScore(r) };
+    return { ...r, grupo_referencia: key || 'Sem informação territorial', referencia_comparacao: ref, classificacao_media: basicClass(ratio, ref), distancia_media: dist, potencial_diversificacao: potentialScore(r) };
   });
   applyIndicatorObj4(classified);
   return classified;
@@ -516,7 +544,7 @@ function renderGroupCharts(rows) {
     const xs = [1,2,3,4].map(q => `${cfg.dimA.prefix}${q}`);
     const ys = [1,2,3,4].map(q => `${cfg.dimB.prefix}${q}`);
     const z = ys.map(y => xs.map(x => {
-      const subset = rows.filter(r => `${cfg.dimA.prefix}${r[cfg.dimA.q]}` === x && `${cfg.dimB.prefix}${r[cfg.dimB.q]}` === y);
+      const subset = rows.filter(r => quartileLabel(cfg.dimA, r) === x && quartileLabel(cfg.dimB, r) === y);
       return calcReference(subset, method);
     }));
     Plotly.newPlot('chartGroupMatrix', [{ type:'heatmap', x: xs, y: ys, z, hoverongaps:false, colorscale:'Blues', hovertemplate:'%{x} × %{y}<br>Razão média: %{z:.3f}<extra></extra>' }], plotLayout(`${cfg.dimA.label} × ${cfg.dimB.label}`), plotConfig());
@@ -525,7 +553,9 @@ function renderGroupCharts(rows) {
 function makeGroups(rows, dims) {
   const map = new Map();
   rows.forEach(r => {
-    const key = dims.map(d => `${d.prefix}${r[d.q] || 'NA'}`).join('_');
+    const labels = dims.map(d => quartileLabel(d, r));
+    if (labels.some(v => !v)) return; // evita grupos 'Quartil NA' quando PIB/população não existe
+    const key = labels.join('_');
     if (!map.has(key)) map.set(key, { label:key, rows:[] });
     map.get(key).rows.push(r);
   });
