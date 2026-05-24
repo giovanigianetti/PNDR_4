@@ -1,208 +1,301 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard Monitoramento Amazônia Azul V2</title>
-  <link rel="preconnect" href="https://cdn.plot.ly" />
+  <title>Dashboard Objetivo 4 da PNDR</title>
+  <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 </head>
 <body>
   <header class="hero">
     <div>
-      <p class="eyebrow">Programa Amazônia Azul · Monitoramento público</p>
-      <h1>Dashboard Monitoramento Amazônia Azul V2</h1>
-      <p class="subtitle">Acompanhamento mensal de contratações, beneficiários e contratos em municípios elegíveis e atividades vinculadas à Amazônia Azul.</p>
+      <p class="eyebrow">PNDR · Objetivo 4</p>
+      <h1>Dashboard Objetivo 4 da PNDR</h1>
+      <p class="subtitle">Dependência de commodities, diversificação produtiva e elegibilidade setorial com base em massa salarial formal.</p>
     </div>
-    <div class="hero-card">
-      <span>Base carregada</span>
-      <strong id="source-period">—</strong>
-      <small id="source-summary">JSONs agregados, sem publicação da base bruta.</small>
+    <div class="status-card">
+      <span id="loadStatus">Carregando dados...</span>
+      <small id="dataFootnote">Bases territoriais, CNAE e matriz município–atividade</small>
     </div>
   </header>
 
-  <main class="layout">
-    <aside class="filters" aria-label="Filtros globais">
-      <div class="filters-title">
-        <h2>Filtros</h2>
-        <button id="clearFilters" class="btn secondary">Limpar filtros</button>
+  <div class="layout">
+    <aside class="filters">
+      <h2>Filtros</h2>
+
+      <label>Nível territorial
+        <select id="levelSelect">
+          <option value="municipio">Município</option>
+          <option value="tipologia">ID Tipologia</option>
+        </select>
+      </label>
+
+      <label>UF
+        <select id="ufFilter" multiple size="5"></select>
+      </label>
+
+      <label>Região
+        <select id="regiaoFilter" multiple size="5"></select>
+      </label>
+
+      <label>Tipologia PNDR
+        <select id="tipologiaFilter" multiple size="5"></select>
+      </label>
+
+      <label>Município
+        <input id="municipioSearch" type="search" placeholder="Buscar município..." />
+      </label>
+
+      <div class="filter-block">
+        <h3>CNAE</h3>
+        <label>Seção
+          <select id="secaoFilter" multiple size="5"></select>
+        </label>
+        <label>Divisão
+          <select id="divisaoFilter" multiple size="5"></select>
+        </label>
+        <label>RAIS 2024 Brasil
+          <select id="classificacaoFilter" multiple size="5"></select>
+        </label>
+        <label>Modo de atividade
+          <select id="activityMode">
+            <option value="all">Todas as atividades</option>
+            <option value="obj4">Somente elegíveis OBJ4</option>
+            <option value="commodity">Somente commodities</option>
+            <option value="agr">Somente commodities agrícolas</option>
+            <option value="min">Somente commodities minerais</option>
+          </select>
+        </label>
       </div>
-      <div class="filter-grid">
-        <section class="filter-section" aria-label="Filtros principais">
-          <p class="filter-section-title">Filtros principais</p>
-          <label>Mês de referência<select id="f_mes"></select></label>
-          <label>Janela temporal<select id="f_janela"><option value="1">Mês</option><option value="3">Trimestre</option><option value="6">Semestre</option><option value="12">Últimos 12 meses</option></select></label>
-          <label>Tipologia territorial Amazônia Azul<select id="f_tipologia_territorial_amazonia_azul"></select></label>
-          <label>Atividade vinculada à Amazônia Azul<select id="f_atividade_vinculada_amazonia_azul"></select></label>
-        </section>
-        <section class="filter-section" aria-label="Território e origem">
-          <p class="filter-section-title">Território e origem</p>
-          <label>Fundo/instrumento<select id="f_fundo_origem"></select></label>
-          <label>Macrorregião geográfica<select id="f_macrorregiao_geografica"></select></label>
-          <div class="filter-row two">
-            <label>UF<select id="f_uf"></select></label>
-            <label>Município<select id="f_cod_mun"></select></label>
-          </div>
-        </section>
-        <section class="filter-section" aria-label="Operação e atividade">
-          <p class="filter-section-title">Operação e atividade</p>
-          <label>Setor<select id="f_setor"></select></label>
-          <label>Programa<select id="f_programa"></select></label>
-          <label>Linha de financiamento<select id="f_linha_financiamento"></select></label>
-          <label>Atividade<select id="f_atividade"></select></label>
-          <label>CNAE<select id="f_cnae"></select></label>
-          <div class="filter-row two">
-            <label>Porte<select id="f_porte"></select></label>
-            <label>Sexo<select id="f_sexo_padronizado"></select></label>
-          </div>
-          <label>Finalidade da operação<select id="f_finalidade"></select></label>
-          <label>Natureza do contratante<select id="f_natureza_contratante"></select></label>
-          <label>Instituição operadora<select id="f_instituicao"></select></label>
-        </section>
-        <section class="filter-section" aria-label="Faixas quantitativas">
-          <p class="filter-section-title">Faixas quantitativas</p>
-          <label>Faixa de valor contratado<select id="f_faixa_valor_contratado"></select></label>
-          <label>Faixa de taxa de juros<select id="f_faixa_taxa_juros"></select></label>
-          <div class="filter-row two">
-            <label>Faixa de contratos<select id="f_faixa_contratos"></select></label>
-            <label>Faixa de beneficiários<select id="f_faixa_beneficiarios"></select></label>
-          </div>
-        </section>
+
+      <div class="filter-block">
+        <h3>Comparação</h3>
+        <label>Referência
+          <select id="referenceMode">
+            <option value="brasil">Brasil / universo filtrado</option>
+            <option value="q_pib_2021">Quartil de PIB</option>
+            <option value="q_pib_pc_2021">Quartil de PIB per capita</option>
+            <option value="q_pop_2021">Quartil de população 2021</option>
+            <option value="q_pop_2022">Quartil de população 2022</option>
+            <option value="cruz_q_pib_pop">PIB × População 2021</option>
+            <option value="cruz_q_pibpc_pop">PIB pc × População 2021</option>
+          </select>
+        </label>
+
+        <label>Método da média
+          <select id="meanMethod">
+            <option value="ponderada_massa_obj4">Média ponderada por massa OBJ4</option>
+            <option value="simples">Média simples das razões</option>
+          </select>
+        </label>
+
+        <label>Indicador OBJ4
+          <select id="indicatorMode">
+            <option value="media">Abaixo/acima da média</option>
+            <option value="percentis">Percentis dentro de abaixo/acima</option>
+          </select>
+        </label>
+
+        <label>Mapa
+          <select id="mapMetric">
+            <option value="razao_dependencia_com">Razão de dependência</option>
+            <option value="indicador_obj4">Indicador OBJ4</option>
+          </select>
+        </label>
       </div>
+
+      <button id="applyFilters" class="primary">Atualizar painel</button>
+      <button id="resetFilters" class="secondary">Limpar filtros</button>
     </aside>
 
-    <section class="content">
-      <nav class="tabs" aria-label="Abas do dashboard">
-        <button class="tab active" data-tab="methodology">Instruções e métodos</button>
-        <button class="tab" data-tab="overview">Visão geral</button>
-        <button class="tab" data-tab="detail">Visão detalhada</button>
-        <button class="tab" data-tab="indicators">Indicadores chave</button>
-        <button class="tab" data-tab="maps">Mapas</button>
+    <main class="content">
+      <nav class="tabs" id="tabs">
+        <button data-tab="overview" class="active">Visão geral</button>
+        <button data-tab="maps">Mapas</button>
+        <button data-tab="groups">Grupos territoriais</button>
+        <button data-tab="cnae">Estrutura CNAE</button>
+        <button data-tab="edit">Edição de atividades</button>
+        <button data-tab="ranking">Ranking e priorização</button>
+        <button data-tab="table">Tabela analítica</button>
+        <button data-tab="method">Metodologia</button>
       </nav>
 
-      <section id="methodology" class="tab-panel active">
-        <article id="methodologyContent" class="panel markdown"></article>
-      </section>
-
-      <section id="overview" class="tab-panel">
-        <div class="section-stack">
-          <div id="mainCards" class="cards"></div>
-          <article class="panel narrative"><h3>Leitura da seleção atual</h3><p id="selectionNarrative">Carregando...</p></article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div><h2>Evolução temporal</h2><p class="panel-subtitle">Valor contratado, beneficiários e contratos para a seleção filtrada.</p></div>
-              <label class="mode-select">Modo de exibição<select id="temporalMode"><option value="abs">Valores absolutos</option><option value="share">Percentual da janela</option></select></label>
-            </div>
-            <div class="chart-grid three">
-              <div class="chart-card"><div id="chart_ts_valor"></div></div>
-              <div class="chart-card"><div id="chart_ts_beneficiarios"></div></div>
-              <div class="chart-card"><div id="chart_ts_contratos"></div></div>
-            </div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div><h2>Comparação territorial</h2><p class="panel-subtitle">Brasil e macrorregiões permanecem fixos; UF ou município selecionado é adicionado à comparação.</p></div>
-              <label class="mode-select">Modo de exibição<select id="territoryMode"><option value="abs">Valores absolutos</option><option value="share">Percentual da janela</option></select></label>
-            </div>
-            <div class="chart-grid three">
-              <div class="chart-card"><div id="chart_terr_valor"></div></div>
-              <div class="chart-card"><div id="chart_terr_beneficiarios"></div></div>
-              <div class="chart-card"><div id="chart_terr_contratos"></div></div>
-            </div>
-          </article>
-
-          <article class="panel">
-            <h2>Participação dos municípios elegíveis no total</h2>
-            <p class="panel-subtitle">Compara municípios elegíveis e atividades vinculadas à Amazônia Azul com o total geral da base filtrada.</p>
-            <div id="shareCards" class="cards compact"></div>
-            <div id="chart_shares" class="chart-large"></div>
-          </article>
+      <section class="tab-panel active" id="overview">
+        <div id="cards" class="cards"></div>
+        <div class="grid two">
+          <div class="panel"><h3>Maiores razões de dependência</h3><div id="chartTopRatio" class="chart"></div></div>
+          <div class="panel"><h3>Maiores massas elegíveis</h3><div id="chartTopObj4" class="chart"></div></div>
+          <div class="panel"><h3>PIB per capita × razão de dependência</h3><div id="chartScatter" class="chart"></div></div>
+          <div class="panel"><h3>Composição da massa salarial</h3><div id="chartComposition" class="chart"></div></div>
         </div>
       </section>
 
-      <section id="detail" class="tab-panel">
-        <article class="panel">
+      <section class="tab-panel" id="maps">
+        <div class="panel">
           <div class="panel-header">
-            <div><h2>Top 10 da seleção atual</h2><p class="panel-subtitle">Ranking visual simplificado, com truncamento inteligente para nomes longos.</p></div>
-            <div class="inline-controls"><label>Dimensão<select id="rankDimension"></select></label><label>Indicador<select id="rankIndicator"></select></label></div>
+            <div>
+              <h3>Mapa coroplético</h3>
+              <p class="muted">Escolha entre a razão contínua de dependência e a classificação do Indicador OBJ4 da tabela analítica.</p>
+            </div>
+            <span id="mapWarning" class="warning"></span>
           </div>
-          <div class="chart-card large"><div id="chart_rank_top"></div></div>
-        </article>
-      </section>
-
-      <section id="indicators" class="tab-panel">
-        <div class="section-stack">
-          <article class="panel">
-            <div class="panel-header">
-              <div><h2>Indicadores chave da seleção filtrada</h2><p class="panel-subtitle">Totais e participação das atividades vinculadas à Amazônia Azul para valor, contratos e beneficiários.</p></div>
-            </div>
-            <div id="indicatorCards" class="cards compact"></div>
-          </article>
-          <article class="panel">
-            <div class="panel-header"><div><h2>Composição absoluta por indicador</h2><p class="panel-subtitle">Parcela vinculada e não vinculada à Amazônia Azul, mantendo escalas separadas para evitar distorção visual.</p></div></div>
-            <div class="chart-grid three">
-              <div class="chart-card"><div id="chart_key_valor"></div></div>
-              <div class="chart-card"><div id="chart_key_contratos"></div></div>
-              <div class="chart-card"><div id="chart_key_beneficiarios"></div></div>
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-header">
-              <div><h2>Locais com aumento em atividades Amazônia Azul</h2><p class="panel-subtitle">Variação do indicador em relação à janela anterior, por nível territorial selecionado.</p></div>
-              <div class="inline-controls"><label>Nível territorial<select id="growthLevel"><option value="uf">UF</option><option value="cod_mun">Município</option><option value="macrorregiao_geografica">Macrorregião</option><option value="tipologia_territorial_amazonia_azul">Tipologia territorial Amazônia Azul</option></select></label><label>Indicador<select id="growthIndicator"><option value="valor_azul">Valor contratado em atividades Amazônia Azul</option><option value="contratos_azul">Contratos em atividades Amazônia Azul</option><option value="beneficiarios_azul">Beneficiários em atividades Amazônia Azul</option></select></label></div>
-            </div>
-            <div id="growthCards" class="cards compact"></div>
-            <div class="chart-card large"><div id="chart_growth_dots"></div></div>
-          </article>
-          <article class="panel">
-            <div class="panel-header">
-              <div><h2>Participação por tipologia territorial</h2><p class="panel-subtitle">Distribuição por prioridade territorial do Programa Amazônia Azul.</p></div>
-              <label class="mode-select">Modo<select id="tipologyMode"><option value="abs">Valores absolutos</option><option value="shareTotal">Participação no total da seleção</option><option value="shareTip">Participação da Amazônia Azul dentro da tipologia</option></select></label>
-            </div>
-            <div class="chart-grid three">
-              <div class="chart-card"><div id="chart_tip_valor"></div></div>
-              <div class="chart-card"><div id="chart_tip_contratos"></div></div>
-              <div class="chart-card"><div id="chart_tip_beneficiarios"></div></div>
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-header"><div><h2>Benchmarking territorial</h2><p class="panel-subtitle">Comparação sintética entre território selecionado e benchmark.</p></div><div class="inline-controls"><label>Território selecionado<select id="benchA"></select></label><label>Benchmark<select id="benchB"></select></label></div></div>
-            <div id="benchCards" class="cards compact"></div>
-            <div id="chart_benchmark" class="chart-large"></div>
-            <div class="table-wrap"><table id="benchTable"><thead><tr><th>Indicador</th><th>Território selecionado</th><th>Benchmark</th><th>Diferença absoluta</th><th>Diferença p.p.</th><th>Diferença relativa</th></tr></thead><tbody></tbody></table></div>
-          </article>
+          <div id="map"></div>
         </div>
       </section>
 
-      <section id="maps" class="tab-panel">
-        <article class="panel">
+      <section class="tab-panel" id="groups">
+        <div class="panel">
           <div class="panel-header">
-            <div><h2>Mapas coropléticos municipais</h2><p class="panel-subtitle">Renderização sob demanda com municípios e contornos de UF. As malhas só são carregadas quando esta aba é aberta.</p></div>
-            <div class="inline-controls"><label>Indicador do mapa<select id="mapIndicator"><option value="valor">Valor contratado</option><option value="beneficiarios">Beneficiários</option><option value="contratos">Contratos</option><option value="share_valor_azul">Participação Amazônia Azul no valor</option><option value="share_beneficiarios_azul">Participação Amazônia Azul nos beneficiários</option><option value="share_contratos_azul">Participação Amazônia Azul nos contratos</option><option value="share_mulheres_valor">Participação feminina no valor</option><option value="var_valor">Variação absoluta em valor</option><option value="var_beneficiarios">Variação absoluta em beneficiários</option><option value="var_contratos">Variação absoluta em contratos</option><option value="growth_valor">Crescimento percentual em valor</option><option value="growth_beneficiarios">Crescimento percentual em beneficiários</option><option value="growth_contratos">Crescimento percentual em contratos</option></select></label><button id="resetMap" class="btn secondary">Resetar enquadramento</button></div>
+            <div>
+              <h3>Matriz de grupos territoriais</h3>
+              <p class="muted">Monte a matriz com quartis de quaisquer combinações dois a dois, ou visualize uma dimensão isolada.</p>
+            </div>
+            <div class="toolbar">
+              <label>Dimensão A
+                <select id="groupVarA">
+                  <option value="pib">PIB 2021</option>
+                  <option value="pibpc">PIB per capita 2021</option>
+                  <option value="pop2021">População 2021</option>
+                  <option value="pop2022">População 2022</option>
+                </select>
+              </label>
+              <label>Dimensão B
+                <select id="groupVarB">
+                  <option value="none">Isolada</option>
+                  <option value="pib">PIB 2021</option>
+                  <option value="pibpc">PIB per capita 2021</option>
+                  <option value="pop2021" selected>População 2021</option>
+                  <option value="pop2022">População 2022</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <p id="mapStatus" class="note">O mapa é renderizado quando a aba é aberta.</p>
-          <div class="map-shell"><div id="map"></div></div>
-        </article>
+          <div id="chartGroupMatrix" class="chart"></div>
+        </div>
+        <div class="panel">
+          <h3>Estatísticas por grupo</h3>
+          <div class="toolbar"><button id="exportGroups" class="secondary">Exportar grupos filtrados</button></div>
+          <div id="groupsTable" class="table-wrap"></div>
+        </div>
       </section>
 
-    </section>
-  </main>
+      <section class="tab-panel" id="cnae">
+        <div class="grid two">
+          <div class="panel"><h3>Massa salarial por seção CNAE</h3><div id="chartCnaeSecao" class="chart"></div></div>
+          <div class="panel"><h3>Salário relativo × vínculos</h3><div id="chartCnaeScatter" class="chart"></div></div>
+        </div>
+        <div class="panel">
+          <h3>Ranking de atividades CNAE</h3>
+          <div id="cnaeRankingTable" class="table-wrap"></div>
+        </div>
+      </section>
 
-  <footer class="footer"></footer>
+      <section class="tab-panel" id="edit">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Edição dinâmica de atividades</h3>
+              <p class="muted">Altere a categoria exclusiva de cada CNAE no navegador: OBJ4, Agrícola, Mineral ou Excluir OBJ4. As colunas da tabela podem ser ordenadas e redimensionadas.</p>
+            </div>
+            <div class="toolbar">
+              <button id="applyActivityChanges" class="primary">Aplicar alterações</button>
+              <button id="restoreActivityChanges" class="secondary">Restaurar original</button>
+              <button id="downloadActivityCsv" class="secondary">Baixar classificação ajustada</button>
+              <label class="upload secondary">Carregar CSV<input type="file" id="uploadActivityCsv" accept=".csv" hidden /></label>
+            </div>
+          </div>
+          <div class="edit-controls">
+            <input id="cnaeSearch" type="search" placeholder="Buscar CNAE ou descrição..." />
+            <select id="bulkClassificacao" multiple size="4"></select>
+            <button id="excludeByClass" class="secondary">Excluir do OBJ4 pela RAIS 2024 Brasil selecionada</button>
+            <button id="includeVisibleObj4" class="secondary">Marcar filtradas como OBJ4</button>
+            <button id="removeVisibleObj4" class="secondary">Remover filtradas do OBJ4</button>
+          </div>
+          <div id="activityEditTable" class="table-wrap large-table resizable-table"></div>
+        </div>
+      </section>
 
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/data-loader.js"></script>
-  <script src="js/transforms.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/maps.js"></script>
-  <script src="js/indicators.js"></script>
-  <script src="js/app.js"></script>
+      <section class="tab-panel" id="ranking">
+        <div class="panel">
+          <h3>Ranking territorial</h3>
+          <div class="toolbar">
+            <select id="rankingMetric">
+              <option value="razao_dependencia_com">Maior razão de dependência</option>
+              <option value="massa_obj4">Maior massa OBJ4</option>
+              <option value="massa_com">Maior massa commodity</option>
+              <option value="distancia_media">Maior distância acima da média</option>
+              <option value="potencial_diversificacao">Potencial de diversificação</option>
+            </select>
+            <button id="exportRanking" class="secondary">Exportar ranking</button>
+          </div>
+          <div id="rankingTable" class="table-wrap"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="table">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Tabela analítica</h3>
+              <p class="muted">O campo Indicador OBJ4 pode ser exibido como classificação abaixo/acima da média ou como percentis dentro dos grupos abaixo/acima.</p>
+            </div>
+            <div class="toolbar">
+              <select id="tableDataset">
+                <option value="territorial">Territorial</option>
+                <option value="cnae">CNAE</option>
+                <option value="groups">Grupos</option>
+              </select>
+              <input id="tableSearch" type="search" placeholder="Buscar na tabela..." />
+              <button id="exportTable" class="secondary">Exportar CSV</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="panel inner"><h3>Visão geral do Indicador OBJ4</h3><div id="chartIndicatorSummary" class="chart small"></div></div>
+            <div class="panel inner"><h3>PIB, população e massa salarial por Indicador OBJ4</h3><div id="indicatorSummaryTable" class="table-wrap compact-table"></div></div>
+          </div>
+          <div id="analyticTable" class="table-wrap"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="method">
+        <div class="panel method">
+          <h2>Metodologia</h2>
+          <p>O dashboard calcula a dependência de commodities a partir da massa salarial formal associada a cada combinação município–CNAE. A razão central é:</p>
+          <p class="formula">razão de dependência = massa salarial em commodities agrícolas e minerais ÷ massa salarial elegível ao Objetivo 4.</p>
+          <p>A massa elegível é definida pelas atividades classificadas como OBJ4. A massa em commodities é a soma das atividades classificadas como commodity agrícola ou commodity mineral.</p>
+
+          <h3>RAIS 2024 Brasil</h3>
+          <p>RAIS 2024 Brasil é a classificação setorial construída a partir da tabela nacional de salários, vínculos, massa salarial, quartis e ranks da RAIS 2024, excluindo empregos e empresas do setor público.</p>
+
+          <h3>Médias de referência</h3>
+          <p>O painel permite comparar cada território à média do Brasil/universo filtrado, a quartis isolados de PIB, PIB per capita, população de 2021 ou população de 2022, e aos cruzamentos PIB × População e PIB per capita × População. Foram mantidos dois métodos: média simples das razões territoriais e média ponderada por massa OBJ4.</p>
+          <ul>
+            <li><strong>Média simples:</strong> média aritmética das razões territoriais.</li>
+            <li><strong>Média ponderada por massa OBJ4:</strong> média das razões territoriais ponderada pela massa salarial elegível ao Objetivo 4; por construção, equivale à razão agregada soma(massa commodity) ÷ soma(massa OBJ4).</li>
+          </ul>
+
+          <h3>Indicador OBJ4</h3>
+          <p>O Indicador OBJ4 classifica o território comparando sua razão de dependência de commodities à referência selecionada. No modo simples, o território é classificado como abaixo ou acima/igual à média. No modo por percentis, os territórios abaixo e acima da média são subdivididos separadamente em quatro faixas percentílicas, permitindo distinguir casos moderados e extremos.</p>
+
+          <h3>Potencial de diversificação</h3>
+          <p>A aba Ranking e priorização inclui um índice exploratório de potencial de diversificação. O indicador combina maior massa salarial elegível, menor dependência de commodities e maior PIB per capita, normalizados em escala aproximada de 0 a 100. Ele deve ser interpretado como uma ordenação heurística para triagem, não como medida causal de impacto ou retorno de política pública.</p>
+
+          <h3>Edição de atividades</h3>
+          <p>A aba de edição permite alterar dinamicamente a categoria exclusiva de cada CNAE: OBJ4, Agrícola, Mineral ou Excluir OBJ4. As bases originais são preservadas e as alterações podem ser exportadas ou recarregadas em CSV.</p>
+
+          <h3>Limitações</h3>
+          <p>A RAIS cobre vínculos formais e a massa salarial é uma proxy parcial da estrutura produtiva. Atividades informais, excedente operacional, valor adicionado e encadeamentos intersetoriais não são diretamente observados neste indicador.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
